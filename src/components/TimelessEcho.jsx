@@ -4,27 +4,63 @@ import './TimelessEcho.css';
 const TimelessEcho = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [isFlipping, setIsFlipping] = useState(false);
-  const [flipDirection, setFlipDirection] = useState(null); // 'forward' or 'backward'
+  const [flipDirection, setFlipDirection] = useState(null);
   const [showRotatePrompt, setShowRotatePrompt] = useState(false);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const [audio] = useState(new Audio('/album/background-music.mp3'));
+  const [preloadedImages, setPreloadedImages] = useState(new Set());
 
-  const TOTAL_PAGES = 12;
+  const TOTAL_PAGES = 12; // Change this to your actual page count (50, 100, etc.)
 
-  // Generate pages
+  // Generate pages with WebP format
   const pages = Array.from({ length: TOTAL_PAGES }, (_, i) => ({
     id: i + 1,
-    image: `/album/${i + 1}.jpg`,
+    image: `/album/${i + 1}.webp`, // Using WebP for better performance
     alt: `Page ${i + 1}`,
     isSinglePage: i === 0 || i === TOTAL_PAGES - 1
   }));
 
+  // Preload image function for instant page flips
+  const preloadImage = (src) => {
+    if (preloadedImages.has(src)) return; // Already preloaded
+    
+    const img = new Image();
+    img.src = src;
+    img.onload = () => {
+      setPreloadedImages(prev => new Set([...prev, src]));
+    };
+  };
+
+  // Preload next 2 pages for instant flipping
+  useEffect(() => {
+    const pagesToPreload = [];
+    
+    if (currentPage + 1 < TOTAL_PAGES) {
+      pagesToPreload.push(pages[currentPage + 1].image);
+    }
+    if (currentPage + 2 < TOTAL_PAGES) {
+      pagesToPreload.push(pages[currentPage + 2].image);
+    }
+    if (currentPage + 3 < TOTAL_PAGES) {
+      pagesToPreload.push(pages[currentPage + 3].image);
+    }
+    
+    // Also preload previous pages for backward navigation
+    if (currentPage - 1 >= 0) {
+      pagesToPreload.push(pages[currentPage - 1].image);
+    }
+    if (currentPage - 2 >= 0) {
+      pagesToPreload.push(pages[currentPage - 2].image);
+    }
+    
+    pagesToPreload.forEach(preloadImage);
+  }, [currentPage]);
+
   // Setup audio properties
   useEffect(() => {
-    audio.loop = true; // Loop the music
-    audio.volume = 0.5; // Set volume to 50%
+    audio.loop = true;
+    audio.volume = 0.5;
     
-    // Cleanup when component unmounts
     return () => {
       audio.pause();
       audio.currentTime = 0;
@@ -231,7 +267,12 @@ const TimelessEcho = () => {
                   <img
                     src={pages[currentPage].image}
                     alt={pages[currentPage].alt}
-                    onError={(e) => { e.target.src = '/api/placeholder/1920/1080'; }}
+                    loading="lazy"
+                    decoding="async"
+                    onError={(e) => { 
+                      // Fallback to JPG if WebP fails
+                      e.target.src = `/album/${currentPage + 1}.jpg`; 
+                    }}
                   />
                 </div>
               ) : (
@@ -241,7 +282,11 @@ const TimelessEcho = () => {
                     <img
                       src={pages[currentPage].image}
                       alt={pages[currentPage].alt}
-                      onError={(e) => { e.target.src = '/api/placeholder/960/1080'; }}
+                      loading="lazy"
+                      decoding="async"
+                      onError={(e) => { 
+                        e.target.src = `/album/${currentPage + 1}.jpg`; 
+                      }}
                     />
                     <div className="page-number left">{currentPage + 1}</div>
                   </div>
@@ -252,7 +297,11 @@ const TimelessEcho = () => {
                     <img
                       src={pages[currentPage + 1].image}
                       alt={pages[currentPage + 1].alt}
-                      onError={(e) => { e.target.src = '/api/placeholder/960/1080'; }}
+                      loading="lazy"
+                      decoding="async"
+                      onError={(e) => { 
+                        e.target.src = `/album/${currentPage + 2}.jpg`; 
+                      }}
                     />
                     <div className="page-number right">{currentPage + 2}</div>
                   </div>
