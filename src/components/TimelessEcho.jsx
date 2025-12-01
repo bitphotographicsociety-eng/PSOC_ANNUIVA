@@ -10,19 +10,19 @@ const TimelessEcho = () => {
   const [audio] = useState(new Audio('/album/background-music.mp3'));
   const [preloadedImages, setPreloadedImages] = useState(new Set());
 
-  const TOTAL_PAGES = 12; // Change this to your actual page count (50, 100, etc.)
+  const TOTAL_PAGES = 66;
 
   // Generate pages with WebP format
   const pages = Array.from({ length: TOTAL_PAGES }, (_, i) => ({
     id: i + 1,
-    image: `/album/${i + 1}.webp`, // Using WebP for better performance
+    image: `/album/${i + 1}.webp`,
     alt: `Page ${i + 1}`,
     isSinglePage: i === 0 || i === TOTAL_PAGES - 1
   }));
 
   // Preload image function for instant page flips
   const preloadImage = (src) => {
-    if (preloadedImages.has(src)) return; // Already preloaded
+    if (preloadedImages.has(src)) return;
     
     const img = new Image();
     img.src = src;
@@ -31,30 +31,35 @@ const TimelessEcho = () => {
     };
   };
 
-  // Preload next 2 pages for instant flipping
+  // Aggressively preload surrounding pages for instant, glitch-free flipping
   useEffect(() => {
     const pagesToPreload = [];
     
-    if (currentPage + 1 < TOTAL_PAGES) {
-      pagesToPreload.push(pages[currentPage + 1].image);
-    }
-    if (currentPage + 2 < TOTAL_PAGES) {
-      pagesToPreload.push(pages[currentPage + 2].image);
-    }
-    if (currentPage + 3 < TOTAL_PAGES) {
-      pagesToPreload.push(pages[currentPage + 3].image);
+    // Preload next 5 pages
+    for (let i = 1; i <= 5; i++) {
+      if (currentPage + i < TOTAL_PAGES) {
+        pagesToPreload.push(pages[currentPage + i].image);
+      }
     }
     
-    // Also preload previous pages for backward navigation
-    if (currentPage - 1 >= 0) {
-      pagesToPreload.push(pages[currentPage - 1].image);
-    }
-    if (currentPage - 2 >= 0) {
-      pagesToPreload.push(pages[currentPage - 2].image);
+    // Preload previous 5 pages
+    for (let i = 1; i <= 5; i++) {
+      if (currentPage - i >= 0) {
+        pagesToPreload.push(pages[currentPage - i].image);
+      }
     }
     
     pagesToPreload.forEach(preloadImage);
   }, [currentPage]);
+
+  // Preload ALL images on mount for ultimate smoothness
+  useEffect(() => {
+    const preloadAll = setTimeout(() => {
+      pages.forEach(page => preloadImage(page.image));
+    }, 100);
+    
+    return () => clearTimeout(preloadAll);
+  }, []);
 
   // Setup audio properties
   useEffect(() => {
@@ -101,14 +106,13 @@ const TimelessEcho = () => {
     if (isFlipping) return;
 
     if (isCoverPage) {
-      // From cover (single page) to first spread
       setIsFlipping(true);
       setFlipDirection('forward');
       setTimeout(() => {
         setCurrentPage(1);
         setIsFlipping(false);
         setFlipDirection(null);
-      }, 850);
+      }, 600);
     } else if (currentPage < TOTAL_PAGES - 1) {
       setIsFlipping(true);
       setFlipDirection('forward');
@@ -120,7 +124,7 @@ const TimelessEcho = () => {
         }
         setIsFlipping(false);
         setFlipDirection(null);
-      }, 850);
+      }, 600);
     }
   };
 
@@ -128,14 +132,13 @@ const TimelessEcho = () => {
     if (isFlipping) return;
 
     if (isLastPage) {
-      // From last page (single page) to previous spread
       setIsFlipping(true);
       setFlipDirection('backward');
       setTimeout(() => {
         setCurrentPage(TOTAL_PAGES - 3);
         setIsFlipping(false);
         setFlipDirection(null);
-      }, 850);
+      }, 600);
     } else if (currentPage > 0) {
       setIsFlipping(true);
       setFlipDirection('backward');
@@ -147,7 +150,7 @@ const TimelessEcho = () => {
         }
         setIsFlipping(false);
         setFlipDirection(null);
-      }, 850);
+      }, 600);
     }
   };
 
@@ -192,7 +195,6 @@ const TimelessEcho = () => {
     return `Pages ${currentPage + 1}-${currentPage + 2} of ${TOTAL_PAGES}`;
   };
 
-  // Helper function to get flip class for a page
   const getFlipClass = (position) => {
     if (!isFlipping) return '';
     
@@ -222,9 +224,9 @@ const TimelessEcho = () => {
       <header className="header">
         <div className="header-container">
           <div className="logo-group">
-            <img src="/logos/bit-logo.png" alt="BIT Mesra Logo" className="logo-image" />
-            <img src="/logos/annuvia-logo.png" alt="ANNUVIA'25 Logo" className="logo-image" />
-            <img src="/logos/psoc-logo.png" alt="PSOC Logo" className="logo-image" />
+            <img src="/logos/bit-logo.jpg" alt="BIT Mesra Logo" className="logo-image" />
+            <img src="/logos/annuvia-logo.jpg" alt="ANNUVIA'25 Logo" className="logo-image" />
+            <img src="/logos/psoc-logo.jpg" alt="PSOC Logo" className="logo-image" />
           </div>
 
           <div className="header-title">
@@ -262,7 +264,6 @@ const TimelessEcho = () => {
           <div className={`flipbook-container ${isSinglePageView ? 'single-page' : 'double-page'} ${isFlipping ? 'animating' : ''}`}>
             <div className="page-view">
               {isSinglePageView ? (
-                /* Single Page View */
                 <div className="page">
                   <img
                     src={pages[currentPage].image}
@@ -275,7 +276,6 @@ const TimelessEcho = () => {
                   />
                 </div>
               ) : (
-                /* Double Page Spread */
                 <>
                   <div className={`page half left ${getFlipClass('left')}`}>
                     <img
